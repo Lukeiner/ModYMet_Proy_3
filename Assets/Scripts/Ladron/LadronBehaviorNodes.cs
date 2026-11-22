@@ -30,7 +30,8 @@ public partial class MoverAObjetivo2DAction : Action
         {
             m_Agente.isStopped = false;
             m_Agente.speed = Velocidad.Value;
-            m_Agente.stoppingDistance = DistanciaParada.Value;
+            m_Agente.stoppingDistance = 0f;
+            m_Agente.autoBraking = true;
             m_Agente.SetDestination(Target.Value.transform.position);
         }
         else
@@ -53,7 +54,27 @@ public partial class MoverAObjetivo2DAction : Action
         {
             if (m_Agente.pathPending) return Status.Running;
             if (m_Agente.pathStatus == NavMeshPathStatus.PathInvalid) return Status.Failure;
-            if (m_Agente.remainingDistance <= DistanciaParada.Value) return Status.Success;
+
+            // Se mide la distancia real al objetivo: remainingDistance da 0 si el
+            // camino se borro (por ejemplo al ser capturado) y daria un falso "llegue".
+            Vector2 destinoNav = Target.Value.transform.position;
+            if (Vector2.Distance(Agent.Value.transform.position, destinoNav) <= DistanciaParada.Value + 0.05f)
+                return Status.Success;
+
+            // Si el punto no es alcanzable (por ejemplo, quedo pegado a un obstaculo),
+            // el agente se detiene en el lugar mas cercano posible: se toma como llegada.
+            if (m_Agente.hasPath && m_Agente.pathStatus == NavMeshPathStatus.PathPartial &&
+                m_Agente.remainingDistance <= 0.05f)
+            {
+                Debug.LogWarning("Ladron: no pudo llegar exactamente a " + Target.Value.name + " (fuera del NavMesh)");
+                return Status.Success;
+            }
+
+            if (!m_Agente.hasPath || m_Agente.isStopped)
+            {
+                m_Agente.isStopped = false;
+                m_Agente.SetDestination(destinoNav);
+            }
             return Status.Running;
         }
 
@@ -142,7 +163,7 @@ public partial class BuscarProductoDisponibleAction : Action
     {
         if (Agent.Value == null) return Status.Failure;
 
-        Producto[] productos = UnityEngine.Object.FindObjectsByType<Producto>(FindObjectsSortMode.None);
+        Producto[] productos = UnityEngine.Object.FindObjectsByType<Producto>();
         Producto mejor = null;
         float mejorDist = float.MaxValue;
         Vector2 pos = Agent.Value.transform.position;
@@ -187,6 +208,10 @@ public partial class RobarProductoAction : Action
 
         m_Producto = ProductoObjetivo.Value.GetComponent<Producto>();
         if (m_Producto == null || !m_Producto.Disponible) return Status.Failure;
+
+        // Solo puede robar si esta al lado del producto.
+        if (Vector2.Distance(Agent.Value.transform.position, ProductoObjetivo.Value.transform.position) > 1.2f)
+            return Status.Failure;
 
         m_Estado = Agent.Value.GetComponent<LadronEstado>();
         if (m_Estado != null) m_Estado.Robando = true;

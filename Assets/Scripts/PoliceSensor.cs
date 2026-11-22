@@ -8,19 +8,26 @@ public class PoliceSensor : MonoBehaviour
     public float rangoDetencion = 0.8f;
 
     private BehaviorGraphAgent agent;
+    private LadronEstado estadoLadron;
     private bool loEstabaViendo = false;
+
     void Start()
     {
         agent = GetComponent<BehaviorGraphAgent>();
+        if (ladron != null) estadoLadron = ladron.GetComponent<LadronEstado>();
     }
+
     void Update()
     {
         if (ladron == null) return;
 
         float distancia = Vector2.Distance(transform.position, ladron.position);
-        bool veAhora = distancia <= rangoVision;
 
-        // Si lo estaba viendo y recién lo perdió de vista, guarda la pista
+        // Si el ladron esta escondido o ya fue capturado, el policia no lo ve.
+        bool escondido = estadoLadron != null && (estadoLadron.Escondido || estadoLadron.Capturado);
+        bool veAhora = distancia <= rangoVision && !escondido;
+
+        // Si lo estaba viendo y recien lo perdio de vista, guarda la pista
         if (loEstabaViendo && !veAhora)
         {
             agent.BlackboardReference.SetVariableValue("UltimaPosicionVista", ladron.position);
@@ -29,8 +36,11 @@ public class PoliceSensor : MonoBehaviour
 
         loEstabaViendo = veAhora;
 
+        bool puedeDetener = veAhora && distancia <= rangoDetencion;
         agent.BlackboardReference.SetVariableValue("VeAlLadron", veAhora);
-        agent.BlackboardReference.SetVariableValue("PuedeDetener", distancia <= rangoDetencion);
-    }
+        agent.BlackboardReference.SetVariableValue("PuedeDetener", puedeDetener);
 
+        // Al alcanzarlo, lo captura (detiene el arbol del ladron).
+        if (puedeDetener && estadoLadron != null) estadoLadron.Capturar();
+    }
 }
