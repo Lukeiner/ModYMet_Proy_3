@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Behavior;
+using UnityEngine.AI;
 
 public class PoliceSensor : MonoBehaviour
 {
@@ -10,10 +11,14 @@ public class PoliceSensor : MonoBehaviour
     private BehaviorGraphAgent agent;
     private LadronEstado estadoLadron;
     private bool loEstabaViendo = false;
+    private NavMeshAgent navAgent;
+    private float velocidadInspector;
 
     void Start()
     {
         agent = GetComponent<BehaviorGraphAgent>();
+        navAgent = GetComponent<NavMeshAgent>();
+        if (navAgent != null) velocidadInspector = navAgent.speed;
         if (ladron != null) estadoLadron = ladron.GetComponent<LadronEstado>();
     }
 
@@ -42,5 +47,10 @@ public class PoliceSensor : MonoBehaviour
 
         // Al alcanzarlo, lo captura (detiene el arbol del ladron).
         if (puedeDetener && estadoLadron != null) estadoLadron.Capturar();
+    }
+
+    void LateUpdate()
+    {
+        if (navAgent != null) navAgent.speed = velocidadInspector;
     }
 }

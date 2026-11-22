@@ -29,12 +29,14 @@ public class LadronEstado : MonoBehaviour
     private Behaviour m_Grafo;
     private NavMeshAgent m_Agente;
     private SpriteRenderer m_Sprite;
+    private Color m_ColorOriginal = Color.white;
 
     private void Awake()
     {
         m_Grafo = GetComponent("BehaviorGraphAgent") as Behaviour;
         m_Agente = GetComponent<NavMeshAgent>();
         m_Sprite = GetComponentInChildren<SpriteRenderer>();
+        if (m_Sprite != null) m_ColorOriginal = m_Sprite.color;
         // Protegido desde el primer frame (el policia puede actualizar antes que nuestro Start).
         m_ProtegidoHasta = Time.time + TiempoProteccion;
     }
@@ -54,6 +56,13 @@ public class LadronEstado : MonoBehaviour
         else transform.position = inicio.transform.position;
     }
 
+    private void Update()
+    {
+        // Mientras esta escondido se ve mas oscuro, para que se note en la demo.
+        if (m_Sprite == null || Capturado) return;
+        m_Sprite.color = Escondido ? m_ColorOriginal * new Color(0.45f, 0.45f, 0.45f, 1f) : m_ColorOriginal;
+    }
+
     public void Capturar()
     {
         if (Capturado || Time.time < m_ProtegidoHasta) return;
@@ -66,7 +75,7 @@ public class LadronEstado : MonoBehaviour
 
         if (m_Grafo != null) m_Grafo.enabled = false;
         if (m_Agente != null && m_Agente.isOnNavMesh) { m_Agente.ResetPath(); m_Agente.isStopped = true; }
-        if (m_Sprite != null) m_Sprite.color = new Color(1f, 1f, 1f, 0.4f);
+        if (m_Sprite != null) m_Sprite.color = new Color(m_ColorOriginal.r, m_ColorOriginal.g, m_ColorOriginal.b, 0.4f);
 
         Invoke(nameof(Reaparecer), TiempoReaparicion);
     }
@@ -77,7 +86,7 @@ public class LadronEstado : MonoBehaviour
         m_ProtegidoHasta = Time.time + TiempoProteccion;
 
         if (m_Agente != null && m_Agente.isOnNavMesh) m_Agente.isStopped = false;
-        if (m_Sprite != null) m_Sprite.color = Color.white;
+        if (m_Sprite != null) m_Sprite.color = m_ColorOriginal;
 
         Capturado = false;
 
