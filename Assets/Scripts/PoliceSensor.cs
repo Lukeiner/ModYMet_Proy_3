@@ -8,6 +8,7 @@ public class PoliceSensor : MonoBehaviour
     public float rangoDetencion = 0.8f;
 
     private BehaviorGraphAgent agent;
+    private bool loEstabaViendo = false;
     void Start()
     {
         agent = GetComponent<BehaviorGraphAgent>();
@@ -17,9 +18,18 @@ public class PoliceSensor : MonoBehaviour
         if (ladron == null) return;
 
         float distancia = Vector2.Distance(transform.position, ladron.position);
+        bool veAhora = distancia <= rangoVision;
 
-        // Actualiza los booleanos del Blackboard automáticamente
-        agent.BlackboardReference.SetVariableValue("VeAlLadron", distancia <= rangoVision);
+        // Si lo estaba viendo y recién lo perdió de vista, guarda la pista
+        if (loEstabaViendo && !veAhora)
+        {
+            agent.BlackboardReference.SetVariableValue("UltimaPosicionVista", ladron.position);
+            agent.BlackboardReference.SetVariableValue("TienePista", true);
+        }
+
+        loEstabaViendo = veAhora;
+
+        agent.BlackboardReference.SetVariableValue("VeAlLadron", veAhora);
         agent.BlackboardReference.SetVariableValue("PuedeDetener", distancia <= rangoDetencion);
     }
 
